@@ -11,9 +11,9 @@ provider:
   runtime: nodejs8.10
 
 functions:
-  hello:
-    handler: src/email/custom/handler.hello
+  customEmail:
+    handler: src/email/custom/handler.run
     events:
       - http:
-          method: get
-          path: hello
+          method: post
+          path: /api/v1/email/custom
