@@ -1,4 +1,4 @@
-import * as crypto from 'crypto'
+import crypto from 'crypto'
 import { ValidationError } from 'joi'
 import { APIGatewayProxyResult } from 'aws-lambda';
 
@@ -36,6 +36,14 @@ export const noBodyResponse: APIGatewayProxyResult = {
     body: errorBody({
         name: 'NO_BODY_ERR',
         message: 'No request body provided. Please '
+    })
+}
+
+export const invalidJSONResponse: APIGatewayProxyResult = {
+    statusCode: 400,
+    body: errorBody({
+        name: 'INVALID_JSON',
+        message: 'JSON body is not valid. Please check the format of your JSON request body.'
     })
 }
 

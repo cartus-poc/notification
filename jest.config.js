@@ -2,6 +2,11 @@ module.exports = {
     "roots": [
         "<rootDir>/src"
     ],
+    globals: {
+        'ts-jest': {
+            diagnostics: false
+        }
+    },
     "transform": {
         "^.+\\.tsx?$": "ts-jest"
     },
@@ -16,5 +21,5 @@ module.exports = {
     ],
     "moduleNameMapper": {
         "\\.(css|html|hbs)$": "<rootDir>/test/static-resources-mock.js"
-      }
+    }
 }

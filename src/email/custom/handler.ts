@@ -1,33 +1,22 @@
-import { APIGatewayProxyHandler, APIGatewayProxyResult, APIGatewayProxyEvent } from 'aws-lambda';
-import * as joi from 'joi'
+import { APIGatewayProxyHandler } from 'aws-lambda';
 import { Payload, schema } from './payload'
-import * as errors from '../../utility/http/errors'
-
-//Start the validation code 
-interface Deps {
-  errors: typeof errors
-  joi: typeof joi
-}
+//import * as errors from '../../utility/http/errors'
+import * as validation from '../../utility/http/validation'
 
 export const run: APIGatewayProxyHandler = async (event, _context) => {
-  return handleRequest({ errors, joi }, event)
-}
+  const { error, payload } = validation.validateRequestBody<Payload>(event.body, schema);
+  if (error) return error;
 
-export const handleRequest = (deps: Deps, event: APIGatewayProxyEvent): APIGatewayProxyResult => {
-  const { errors, joi } = deps;
-  if (!event.body) {
-    return errors.noBodyResponse
-  }
-  const { error, value: payload } = joi.validate<Payload>(JSON.parse(event.body), schema, { abortEarly: false });
-  if (error) {
-    return errors.validationErrorResponse(error)
-  }
+  //Render the template
 
+  //Stage to a queue
+  
   return {
     statusCode: 200,
     body: JSON.stringify({
-      message: 'Go Serverless Webpack (Typescript) v1.0! Your function executed successfully!',
-      input: event,
+      message: 'Got past validation',
+      request: payload,
     }),
   };
 }
+

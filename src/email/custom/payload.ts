@@ -17,3 +17,19 @@ export const schema = joi.object().keys({
     render: joi.object().required(),
     template: joi.string().required()
 })
+
+type MapSchemaTypes = {
+    StringSchema: string;
+    NumberSchema: number;
+    ObjectSchema: object
+    // others?
+}
+type MapSchema<T extends Record<string, keyof MapSchemaTypes>> = {
+    [K in keyof T]: MapSchemaTypes[T[K]]
+  }
+
+function asSchema<T extends Record<string, keyof MapSchemaTypes>>(t: T): T {
+    return t;
+  }
+const personSchema = asSchema(schema);
+type Person = MapSchema<typeof personSchema>; // {name: string; age: number};

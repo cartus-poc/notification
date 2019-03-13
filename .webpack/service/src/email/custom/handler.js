@@ -13372,37 +13372,28 @@ __webpack_require__(/*! source-map-support */ "./node_modules/source-map-support
 /*!*************************************!*\
   !*** ./src/email/custom/handler.ts ***!
   \*************************************/
-/*! exports provided: run, handleRequest */
+/*! exports provided: run */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "run", function() { return run; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "handleRequest", function() { return handleRequest; });
-/* harmony import */ var joi__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! joi */ "./node_modules/joi/lib/index.js");
-/* harmony import */ var joi__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(joi__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _payload__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./payload */ "./src/email/custom/payload.ts");
-/* harmony import */ var _utility_http_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utility/http/errors */ "./src/utility/http/errors.ts");
+/* harmony import */ var _payload__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./payload */ "./src/email/custom/payload.ts");
+/* harmony import */ var _utility_http_validation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utility/http/validation */ "./src/utility/http/validation.ts");
 
-
+//import * as errors from '../../utility/http/errors'
 
 const run = async (event, _context) => {
-    return handleRequest({ errors: _utility_http_errors__WEBPACK_IMPORTED_MODULE_2__, joi: joi__WEBPACK_IMPORTED_MODULE_0__ }, event);
-};
-const handleRequest = (deps, event) => {
-    const { errors, joi } = deps;
-    if (!event.body) {
-        return errors.noBodyResponse;
-    }
-    const { error, value: payload } = joi.validate(JSON.parse(event.body), _payload__WEBPACK_IMPORTED_MODULE_1__["schema"], { abortEarly: false });
-    if (error) {
-        return errors.validationErrorResponse(error);
-    }
+    const { error, payload } = _utility_http_validation__WEBPACK_IMPORTED_MODULE_1__["validateRequestBody"](event.body, _payload__WEBPACK_IMPORTED_MODULE_0__["schema"]);
+    if (error)
+        return error;
+    //Render the template
+    //Stage to a queue
     return {
         statusCode: 200,
         body: JSON.stringify({
-            message: 'Go Serverless Webpack (Typescript) v1.0! Your function executed successfully!',
-            input: event,
+            message: 'Got past validation',
+            request: payload,
         }),
     };
 };
@@ -13431,6 +13422,10 @@ const schema = joi__WEBPACK_IMPORTED_MODULE_0__["object"]().keys({
     render: joi__WEBPACK_IMPORTED_MODULE_0__["object"]().required(),
     template: joi__WEBPACK_IMPORTED_MODULE_0__["string"]().required()
 });
+function asSchema(t) {
+    return t;
+}
+const personSchema = asSchema(schema);
 
 
 /***/ }),
@@ -13439,20 +13434,21 @@ const schema = joi__WEBPACK_IMPORTED_MODULE_0__["object"]().keys({
 /*!************************************!*\
   !*** ./src/utility/http/errors.ts ***!
   \************************************/
-/*! exports provided: errorResponse, noBodyResponse, validationErrorResponse */
+/*! exports provided: errorResponse, noBodyResponse, invalidJSONResponse, validationErrorResponse */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "errorResponse", function() { return errorResponse; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "noBodyResponse", function() { return noBodyResponse; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "invalidJSONResponse", function() { return invalidJSONResponse; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "validationErrorResponse", function() { return validationErrorResponse; });
 /* harmony import */ var crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! crypto */ "crypto");
 /* harmony import */ var crypto__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(crypto__WEBPACK_IMPORTED_MODULE_0__);
 
 const errorBody = (err) => {
     if (!err.debugId) {
-        err.debugId = crypto__WEBPACK_IMPORTED_MODULE_0__["randomBytes"](16).toString('hex');
+        err.debugId = crypto__WEBPACK_IMPORTED_MODULE_0___default.a.randomBytes(16).toString('hex');
     }
     return JSON.stringify(err);
 };
@@ -13467,6 +13463,13 @@ const noBodyResponse = {
     body: errorBody({
         name: 'NO_BODY_ERR',
         message: 'No request body provided. Please '
+    })
+};
+const invalidJSONResponse = {
+    statusCode: 400,
+    body: errorBody({
+        name: 'INVALID_JSON',
+        message: 'JSON body is not valid. Please check the format of your JSON request body.'
     })
 };
 const validationErrorResponse = (errors) => {
@@ -13489,6 +13492,48 @@ const validationErrorResponse = (errors) => {
             message: 'The request body could not be validated. See details',
             details
         })
+    };
+};
+
+
+/***/ }),
+
+/***/ "./src/utility/http/validation.ts":
+/*!****************************************!*\
+  !*** ./src/utility/http/validation.ts ***!
+  \****************************************/
+/*! exports provided: validateRequestBody */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "validateRequestBody", function() { return validateRequestBody; });
+/* harmony import */ var joi__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! joi */ "./node_modules/joi/lib/index.js");
+/* harmony import */ var joi__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(joi__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _utility_http_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utility/http/errors */ "./src/utility/http/errors.ts");
+
+
+const validateRequestBody = (body, schema) => {
+    if (!body) {
+        return {
+            error: _utility_http_errors__WEBPACK_IMPORTED_MODULE_1__["noBodyResponse"]
+        };
+    }
+    //Make sure the body is valid json
+    try {
+        JSON.parse(body);
+    }
+    catch (ex) {
+        return { error: _utility_http_errors__WEBPACK_IMPORTED_MODULE_1__["invalidJSONResponse"] };
+    }
+    const { error, value: payload } = joi__WEBPACK_IMPORTED_MODULE_0___default.a.validate(JSON.parse(body), schema, { abortEarly: false });
+    if (error) {
+        return {
+            error: _utility_http_errors__WEBPACK_IMPORTED_MODULE_1__["validationErrorResponse"](error)
+        };
+    }
+    return {
+        payload
     };
 };
 
