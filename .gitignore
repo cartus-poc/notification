@@ -3,7 +3,10 @@ node_modules
 jspm_packages
 
 # Serverless directories
-# .serverless
+.serverless
 
 # Webpack directories
-# .webpack
+.webpack
+
+# local env variables
+.env

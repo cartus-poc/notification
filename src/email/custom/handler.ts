@@ -1,13 +1,16 @@
 import { APIGatewayProxyHandler } from 'aws-lambda'
 // import { SES } from 'aws-sdk'
 // import nodemailer from 'nodemailer'
+import dotenv from 'dotenv'
 import mustache from 'mustache'
+import sendGrid from '@sendgrid/mail'
 import { Payload, schema } from './payload'
 import { Response } from './response'
 import { errorResponse } from '../../utility/http/errors'
 import * as validation from '../../utility/http/validation'
 // import util from 'util';
-
+dotenv.config()
+sendGrid.setApiKey(process.env.SENDGRID_API_KEY);
 // const ses = new SES();
 
 export const post: APIGatewayProxyHandler = async (event, _context) => {
@@ -26,39 +29,20 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
 
         const emailBody = mustache.render(template, payload.render)
 
-        // const transporter = nodemailer.createTransport({
-        //     host: 'smtp.cartus.com',
-        //     port: 25,
-        //     secure: false,
-        //     ignoreTLS: true
-        // })
-
-        // const info = await transporter.sendMail({
-        //     sender: 'douglas.gerhardt@cartus.com',
-        //     to: payload.to,
-        //     cc: payload.cc,
-        //     bcc: payload.bcc,
-        //     subject: payload.subject
-        // })
-        // console.log('got the info', info)
-        // const res = await ses.sendEmail(sESEmailParams(payload, emailBody)).promise()   
-
-        // console.log(res)
-        //Stage to a queue
-
-
-        const res: Response = {
+        const email: Response = {
             to: payload.to,
             from: payload.from,
             cc: payload.cc,
             bcc: payload.bcc,
             subject: payload.subject,
-            body: emailBody
+            html: emailBody
         }
+
+        await sendGrid.send({ ...email })
 
         return {
             statusCode: 200,
-            body: JSON.stringify(res),
+            body: JSON.stringify(email),
         }
     } catch (ex) {
         console.error('error', ex)
