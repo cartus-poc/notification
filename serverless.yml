@@ -9,10 +9,15 @@ plugins:
 provider:
   name: aws
   runtime: nodejs8.10
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "ses:SendEmail"
+      Resource: "*"
 
 functions:
   customEmail:
-    handler: src/email/custom/handler.run
+    handler: src/email/custom/handler.post
     events:
       - http:
           method: post

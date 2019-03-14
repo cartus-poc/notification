@@ -1,35 +1,39 @@
-import * as joi from 'joi'
+import joi from 'joi'
 
 export interface Payload {
-    to: string,
+    to: string | string[],
     from?: string,
-    cc?: string,
-    bcc?: string,
+    cc?: string | string[],
+    bcc?: string | string[],
+    subject: string,
     render: object,
-    template: string,
+    template: string | {
+      wrapper: string,
+      content: string
+    }
 }
 
 export const schema = joi.object().keys({
-    to: joi.string().email().max(255).required(),
+    to: joi.alternatives(
+        joi.string().email().max(255),
+        joi.array().items(joi.string().email().max(255)).min(1),
+    ).required(),
     from: joi.string().email().max(255).default('do-not-reply@cartus.com'),
-    cc: joi.string().email().max(255),
-    bcc: joi.string().email().max(255),
+    cc: joi.alternatives(
+        joi.string().email().max(255),
+        joi.array().items(joi.string().email().max(255)).min(1),
+    ),
+    bcc: joi.alternatives(
+        joi.string().email().max(255),
+        joi.array().items(joi.string().email().max(255)).min(1),
+    ),
     render: joi.object().required(),
-    template: joi.string().required()
+    subject: joi.string().max(255).required(),
+    template: joi.alternatives( //Could be string or object 
+      joi.string(),
+      joi.object().keys({
+        wrapper: joi.string().required(),
+        content: joi.string().required()
+      })
+    ).required()
 })
-
-type MapSchemaTypes = {
-    StringSchema: string;
-    NumberSchema: number;
-    ObjectSchema: object
-    // others?
-}
-type MapSchema<T extends Record<string, keyof MapSchemaTypes>> = {
-    [K in keyof T]: MapSchemaTypes[T[K]]
-  }
-
-function asSchema<T extends Record<string, keyof MapSchemaTypes>>(t: T): T {
-    return t;
-  }
-const personSchema = asSchema(schema);
-type Person = MapSchema<typeof personSchema>; // {name: string; age: number};

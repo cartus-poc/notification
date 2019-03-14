@@ -1,13 +1,13 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import joi from 'joi'
-import * as errors from '../../utility/http/errors'
+import * as errors from './errors'
 
-interface ValidationResponse {
+interface ValidationResponse<T> {
     error?: APIGatewayProxyResult,
-    payload?: any
+    payload?: T
 }
 
-export const validateRequestBody = <T>(body: string | undefined | null, schema: joi.ObjectSchema) : ValidationResponse => {
+export const validateRequestBody = <T>(body: string | undefined | null, schema: joi.ObjectSchema) : ValidationResponse<T> => {
     if (!body) {
         return {
             error: errors.noBodyResponse
@@ -15,13 +15,13 @@ export const validateRequestBody = <T>(body: string | undefined | null, schema: 
     }
     //Make sure the body is valid json
     try { JSON.parse(body) } catch (ex) { return { error: errors.invalidJSONResponse } }
-    const { error, value: payload } = joi.validate<T>(JSON.parse(body), schema, { abortEarly: false });
+    const { error, value } = joi.validate<T>(JSON.parse(body), schema, { abortEarly: false });
     if (error) {
         return {
             error: errors.validationErrorResponse(error)
         }
     }
     return {
-        payload
+        payload: value
     }
 }

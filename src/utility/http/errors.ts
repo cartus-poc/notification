@@ -11,13 +11,13 @@ interface ErrorDetail {
 
 interface Error {
     name: string,
-    details?: [ErrorDetail],
+    details?: ErrorDetail[],
     debugId?: string,
     message: string,
     informationLink?: string
 }
 
-const errorBody = (err: Error) => {
+export const errorBody = (err: Error) => {
     if (!err.debugId) {
         err.debugId = crypto.randomBytes(16).toString('hex')
     }
@@ -35,7 +35,7 @@ export const noBodyResponse: APIGatewayProxyResult = {
     statusCode: 400,
     body: errorBody({
         name: 'NO_BODY_ERR',
-        message: 'No request body provided. Please '
+        message: 'No request body provided. A valid request body is required.'
     })
 }
 
@@ -48,9 +48,6 @@ export const invalidJSONResponse: APIGatewayProxyResult = {
 }
 
 export const validationErrorResponse = (errors: ValidationError): APIGatewayProxyResult => {
-    console.log(errors)
-    console.log('path', errors.details[0].path)
-    console.log('context', errors.details[0].context)
     let details = errors.details.map(err => {
         const detail: ErrorDetail = {
             field: err.context.key,
@@ -62,7 +59,7 @@ export const validationErrorResponse = (errors: ValidationError): APIGatewayProx
     });
     return {
         statusCode: 400,
-        body: JSON.stringify({
+        body: errorBody({
             name: 'VALIDATION_ERR',
             message: 'The request body could not be validated. See details',
             details
