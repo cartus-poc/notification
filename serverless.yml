@@ -5,17 +5,27 @@ service:
 plugins:
   - serverless-webpack
   - serverless-offline
+  - serverless-stage-manager
 
 provider:
   name: aws
   runtime: nodejs8.10
+  stage: ${opt:stage,'dev'}
   iamRoleStatements:
     - Effect: "Allow"
       Action:
         - "ses:SendEmail"
       Resource: "*"
   environment:
-    SENDGRID_API_KEY: ${ssm:sendgridAPIKey}
+    SENDGRID_API_KEY: ${self:custom.sendgridKey.${self:provider.stage}}
+
+custom:
+  stages:
+    - local
+    - dev
+  sendgridKey:
+    local: ${file(./local.config.json):SENDGRID_API_KEY}
+    dev: ${ssm:sendgridAPIKey} 
 
 functions:
   customEmail:
@@ -24,3 +34,4 @@ functions:
       - http:
           method: post
           path: /api/v1/email/custom
+

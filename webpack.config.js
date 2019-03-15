@@ -20,6 +20,9 @@ module.exports = {
     filename: '[name].js',
   },
   target: 'node',
+  node: {
+    __dirname: true
+  },
   module: {
     rules: [
       // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`

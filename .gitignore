@@ -8,5 +8,5 @@ jspm_packages
 # Webpack directories
 .webpack
 
-# local env variables
-.env
+# local env variables and settings
+local.config.json

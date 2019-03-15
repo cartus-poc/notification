@@ -6,6 +6,7 @@ export interface Payload {
     cc?: string | string[],
     bcc?: string | string[],
     subject: string,
+    html?: boolean,
     render: object,
     template: string | {
       wrapper: string,
@@ -29,6 +30,7 @@ export const schema = joi.object().keys({
     ),
     render: joi.object().required(),
     subject: joi.string().max(255).required(),
+    html: joi.bool().default(true),
     template: joi.alternatives( //Could be string or object 
       joi.string(),
       joi.object().keys({

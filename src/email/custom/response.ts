@@ -4,5 +4,6 @@ export interface Response {
     cc?: string | string[],
     bcc?: string | string[],
     subject: string,
-    html: string
+    text?: string,
+    html?: string
 }
