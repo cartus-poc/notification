@@ -13,7 +13,7 @@ describe('validateRequestBody', () => {
 
     beforeEach(() => {
         sandbox.stub(errors, 'noBodyResponse')
-            .value({
+            .returns({
                 statusCode: 400,
                 body: 'no body'
             })
@@ -23,7 +23,7 @@ describe('validateRequestBody', () => {
                 body: 'validation error'
             })
         sandbox.stub(errors, 'invalidJSONResponse')
-            .value({
+            .returns({
                 statusCode: 400,
                 body: 'invalid json'
             })

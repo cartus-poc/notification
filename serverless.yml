@@ -46,6 +46,15 @@ functions:
       - http:
           method: post
           path: /api/v1/email/custom
+  sendEmail:
+    handler: src/request-handlers/queue/send-email/handler.run
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - NotificationEmailQueue
+              - Arn
+          batchSize: 1
 
 resources:
   Resources:
