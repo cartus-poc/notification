@@ -10,11 +10,11 @@ interface ValidationResponse<T> {
 export const validateRequestBody = <T>(body: string | undefined | null, schema: joi.ObjectSchema) : ValidationResponse<T> => {
     if (!body) {
         return {
-            error: errors.noBodyResponse
+            error: errors.noBodyResponse()
         }
     }
     //Make sure the body is valid json
-    try { JSON.parse(body) } catch (ex) { return { error: errors.invalidJSONResponse } }
+    try { JSON.parse(body) } catch (ex) { return { error: errors.invalidJSONResponse() } }
     const { error, value } = joi.validate<T>(JSON.parse(body), schema, { abortEarly: false });
     if (error) {
         return {

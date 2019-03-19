@@ -1,4 +1,4 @@
-export interface Response {
+export default interface Email {
     to: string | string[],
     from: string,
     cc?: string | string[],

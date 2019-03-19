@@ -1,7 +1,7 @@
 import assert from 'assert'
 import { APIGatewayProxyEvent, Context, APIGatewayProxyResult } from 'aws-lambda'
 import sinon from 'sinon'
-import * as validation from '../../utility/http/validation'
+import * as validation from '../../../../utility/http/validation'
 import { post } from './handler'
 
 

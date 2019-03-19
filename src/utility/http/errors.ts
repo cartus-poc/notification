@@ -1,15 +1,15 @@
 import crypto from 'crypto'
-import { ValidationError } from 'joi'
+import joi from 'joi'
 import { APIGatewayProxyResult } from 'aws-lambda';
 
-interface ErrorDetail {
+export interface ErrorDetail {
     field: string,
     value: any,
     issue: string,
     location: string
 }
 
-interface Error {
+export interface Error {
     name: string,
     details?: ErrorDetail[],
     debugId?: string,
@@ -18,10 +18,12 @@ interface Error {
 }
 
 export const errorBody = (err: Error) => {
-    if (!err.debugId) {
-        err.debugId = crypto.randomBytes(16).toString('hex')
+    //Don't want accidental side effects.
+    const errCopy = { ...err };
+    if (!errCopy.debugId) {
+        errCopy.debugId = crypto.randomBytes(16).toString('hex')
     }
-    return JSON.stringify(err);
+    return JSON.stringify(errCopy);
 }
 
 export const errorResponse = (statusCode: number, err: Error): APIGatewayProxyResult => {
@@ -31,23 +33,27 @@ export const errorResponse = (statusCode: number, err: Error): APIGatewayProxyRe
     }
 }
 
-export const noBodyResponse: APIGatewayProxyResult = {
-    statusCode: 400,
-    body: errorBody({
-        name: 'NO_BODY_ERR',
-        message: 'No request body provided. A valid request body is required.'
-    })
+export const noBodyResponse = (): APIGatewayProxyResult => {
+    return {
+        statusCode: 400,
+        body: errorBody({
+            name: 'NO_BODY_ERR',
+            message: 'No request body provided. A valid request body is required.'
+        })
+    }
 }
 
-export const invalidJSONResponse: APIGatewayProxyResult = {
-    statusCode: 400,
-    body: errorBody({
-        name: 'INVALID_JSON',
-        message: 'JSON body is not valid. Please check the format of your JSON request body.'
-    })
+export const invalidJSONResponse = (): APIGatewayProxyResult => {
+    return {
+        statusCode: 400,
+        body: errorBody({
+            name: 'INVALID_JSON',
+            message: 'JSON body is not valid. Please check the format of your JSON request body.'
+        })
+    }
 }
 
-export const validationErrorResponse = (errors: ValidationError): APIGatewayProxyResult => {
+export const validationErrorResponse = (errors: joi.ValidationError): APIGatewayProxyResult => {
     let details = errors.details.map(err => {
         const detail: ErrorDetail = {
             field: err.context.key,

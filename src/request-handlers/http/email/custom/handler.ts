@@ -1,14 +1,18 @@
 import { APIGatewayProxyHandler } from 'aws-lambda'
 // import { SES } from 'aws-sdk'
 // import nodemailer from 'nodemailer'
+import { SQS } from 'aws-sdk'
 import mustache from 'mustache'
 import sendGrid from '@sendgrid/mail'
 import { Payload, schema } from './payload'
 import { Response } from './response'
-import { errorResponse } from '../../utility/http/errors'
-import * as validation from '../../utility/http/validation'
+import { errorResponse } from '../../../../utility/http/errors'
+import * as validation from '../../../../utility/http/validation'
+import { sendSQSMessage } from '../../../../utility/sqs/sqs'
+import Email from '../../../queue/send-email/Email'
 
 sendGrid.setApiKey(process.env.SENDGRID_API_KEY);
+const sqs = new SQS({ region: process.env.REGION })
 
 export const post: APIGatewayProxyHandler = async (event, _context) => {
     try {
@@ -21,7 +25,7 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
 
         const emailBody = mustache.render(template, payload.render)
 
-        const email: Response = {
+        const email: Email = {
             to: payload.to,
             from: payload.from,
             cc: payload.cc,
@@ -29,13 +33,25 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
             subject: payload.subject,
         }
 
+        //Determine if email should be html or text
         if (payload.html) email.html = emailBody; else email.text = emailBody
 
-        await sendGrid.send({ ...email })
+        const queueUrl = `https://sqs.${process.env.REGION}.amazonaws.com/${process.env.ACCOUNT_ID}/${process.env.EMAIL_QUEUE_NAME}`
+        const sqsRes = await sendSQSMessage(sqs, {
+            MessageBody: JSON.stringify(email),
+            QueueUrl: queueUrl
+        });
+
+        const res: Response = {
+            queueId: sqsRes.MessageId,
+            email 
+        };
+
+        //await sendGrid.send({ ...email })
 
         return {
             statusCode: 200,
-            body: JSON.stringify(email),
+            body: JSON.stringify(res),
         }
 
     } catch (ex) {

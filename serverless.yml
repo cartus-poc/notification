@@ -3,6 +3,7 @@ service:
 
 # Add the serverless-webpack plugin
 plugins:
+  - serverless-pseudo-parameters
   - serverless-webpack
   - serverless-offline
   - serverless-stage-manager
@@ -11,13 +12,18 @@ provider:
   name: aws
   runtime: nodejs8.10
   stage: ${opt:stage,'dev'}
+  region: ${opt:region,'us-east-1'}
   iamRoleStatements:
     - Effect: "Allow"
       Action:
-        - "ses:SendEmail"
-      Resource: "*"
+        - "sqs:SendMessage"
+        - "sqs:GetQueueUrl"
+      Resource: "arn:aws:sqs:${self:provider.region}:${self:provider.environment.ACCOUNT_ID}:${self:provider.environment.EMAIL_QUEUE_NAME}"
   environment:
     SENDGRID_API_KEY: ${self:custom.sendgridKey.${self:provider.stage}}
+    ACCOUNT_ID: ${self:custom.accountId.${self:provider.stage}}
+    REGION: ${self:provider.region}
+    EMAIL_QUEUE_NAME: ${self:custom.emailQueueName.${self:provider.stage}}
 
 custom:
   stages:
@@ -26,12 +32,24 @@ custom:
   sendgridKey:
     local: ${file(./local.config.json):SENDGRID_API_KEY}
     dev: ${ssm:sendgridAPIKey} 
+  accountId: 
+    local: "785891586360"
+    dev: "785891586360"
+  emailQueueName:
+    local: "NotificationEmailQueue-DEV"
+    dev: "NotificationEmailQueue-DEV"
 
 functions:
   customEmail:
-    handler: src/email/custom/handler.post
+    handler: src/request-handlers/http/email/custom/handler.post
     events:
       - http:
           method: post
           path: /api/v1/email/custom
 
+resources:
+  Resources:
+    NotificationEmailQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.emailQueueName.${self:provider.stage}}
