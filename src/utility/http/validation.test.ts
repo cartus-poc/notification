@@ -17,7 +17,7 @@ describe('validateRequestBody', () => {
                 statusCode: 400,
                 body: 'no body'
             })
-        sandbox.stub(errors, 'validationErrorResponse')
+        sandbox.stub(errors, 'joiValidationErrorResponse')
             .returns({
                 statusCode: 400,
                 body: 'validation error'
@@ -62,5 +62,15 @@ describe('validateRequestBody', () => {
         assert(!actual.payload)
         assert.deepEqual(actual.error, { statusCode: 400, body: 'validation error'} )
 
+    })
+    it('should return an object with just the payload when no validation errors occur', () => {
+        event.body = JSON.stringify({ valid: 'json' });
+        sandbox.stub(joi, 'validate')
+            .returns({ value: 'payload' }); //good joi validation
+        const actual = validateRequestBody(event.body, schema)
+        assert(!actual.error)
+        assert(actual.payload)
+        assert.deepEqual(actual.payload, 'payload')
+ 
     })
 })

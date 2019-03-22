@@ -53,7 +53,7 @@ export const invalidJSONResponse = (): APIGatewayProxyResult => {
     }
 }
 
-export const validationErrorResponse = (errors: joi.ValidationError): APIGatewayProxyResult => {
+export const joiValidationErrorResponse = (errors: joi.ValidationError): APIGatewayProxyResult => {
     let details = errors.details.map(err => {
         const detail: ErrorDetail = {
             field: err.context.key,
@@ -63,6 +63,10 @@ export const validationErrorResponse = (errors: joi.ValidationError): APIGateway
         }
         return detail;
     });
+    return validationErrorResponse(details)
+}
+
+export const validationErrorResponse = (details: ErrorDetail[]): APIGatewayProxyResult => {
     return {
         statusCode: 400,
         body: errorBody({
@@ -70,6 +74,5 @@ export const validationErrorResponse = (errors: joi.ValidationError): APIGateway
             message: 'The request body could not be validated. See details',
             details
         })
-    }
-
+    } 
 }

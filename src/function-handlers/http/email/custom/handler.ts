@@ -1,9 +1,9 @@
-import { APIGatewayProxyHandler } from 'aws-lambda'
+import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 import { SQS } from 'aws-sdk'
 import mustache from 'mustache'
 import { Payload, schema } from './payload'
 import { Response } from './response'
-import { errorResponse } from '../../../../utility/http/errors'
+import { errorResponse, validationErrorResponse, Error, ErrorDetail } from '../../../../utility/http/errors'
 import * as validation from '../../../../utility/http/validation'
 import { sendSQSMessage } from '../../../../utility/sqs/sqs'
 import Email from '../../../queue/send-email/Email'
@@ -14,11 +14,16 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
     try {
         const { error, payload } = validation.validateRequestBody<Payload>(event.body, schema)
         if (error) return error
+
+        //Make sure we do not send email to not allowed domains
+        const restrictedDomainError = getRestrictedDomainErrors(payload)
+        if (restrictedDomainError) return restrictedDomainError
+
         //Render the template for email body
         const template = (typeof payload.template !== 'string') ?
             mustache.render(payload.template.wrapper, { content: payload.template.content }) : //Object w/ wrapper and content
             payload.template //Full template provided as string
-        
+
         const emailBody = mustache.render(template, payload.render)
 
         const email: Email = {
@@ -40,7 +45,7 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
 
         const res: Response = {
             queueId: sqsRes.MessageId,
-            email 
+            email
         };
 
         return {
@@ -55,6 +60,35 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
             message: 'Internal Server Error. Please try again later'
         })
     }
+}
+
+export const getRestrictedDomainErrors = (payload: Payload): APIGatewayProxyResult => {
+    if (!process.env.RESTRICTED_DOMAINS) return null //Only if we are restricting
+    const addressFieldsToCheck = ['to', 'from', 'cc', 'bcc'] //Check these for invalid domains
+    const restrictedDomains = process.env.RESTRICTED_DOMAINS.split(',')// Comma seperated list
+        .map(domain => domain.toLowerCase()) //Make them lower case
+    const normalizeArr = (val: string | string[]) => { return (typeof val === 'string') ? [val] : val }
+    let errs: ErrorDetail[] = []
+    //Creates an array of objects with values joined by pipe. Also retains the field name
+    const addresses = addressFieldsToCheck.map(field => ({ field, values: normalizeArr(payload[field]) }))
+    for (let address of addresses) { //For each address (to, from etc)
+        if (address.values && !address.values //If it has a value
+                .every(addrValue => restrictedDomains //if that value...
+                    .some(domain => addrValue.toLowerCase().includes(domain)) //... does not contain at least one of the restricted domains
+                )
+            ) {
+            errs.push({ //It's an error
+                field: address.field,
+                value: payload[address.field],
+                issue: `The field value references an address to a domain that is not valid. Domains have been restricted to "${restrictedDomains}".`,
+                location: `/${address.field}`
+            })
+        }
+    }
+    if (errs.length > 0) {
+        return validationErrorResponse(errs)
+    }
+    return null;
 }
 
 // export const sESEmailParams = (payload: Payload, emailBody: string): SES.SendEmailRequest => {

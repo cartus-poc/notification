@@ -24,6 +24,7 @@ provider:
     ACCOUNT_ID: ${self:custom.accountId.${self:provider.stage}}
     REGION: ${self:provider.region}
     EMAIL_QUEUE_NAME: ${self:custom.emailQueueName.${self:provider.stage}}
+    RESTRICTED_DOMAINS: ${self:custom.restrictedDomains.${self:provider.stage}}
 
 custom:
   stages:
@@ -38,16 +39,19 @@ custom:
   emailQueueName:
     local: "NotificationEmailQueue-DEV"
     dev: "NotificationEmailQueue-DEV"
+  restrictedDomains:
+    local: "cartus.com"
+    dev: "cartus.com"
 
 functions:
   customEmail:
-    handler: src/request-handlers/http/email/custom/handler.post
+    handler: src/function-handlers/http/email/custom/handler.post
     events:
       - http:
           method: post
           path: /api/v1/email/custom
   sendEmail:
-    handler: src/request-handlers/queue/send-email/handler.run
+    handler: src/function-handlers/queue/send-email/handler.run
     events:
       - sqs:
           arn:

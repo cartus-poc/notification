@@ -121,6 +121,30 @@ describe('invalidJSONResponse', () => {
 })
 
 describe('validationErrorResponse', () => {
+    const sandbox = sinon.createSandbox();
+    let errBodySpy = <sinon.SinonSpy>{};
+    beforeEach(() => {
+        errBodySpy = sandbox.spy(errors, 'errorBody')
+    })
+    afterEach(() => {
+        sandbox.restore()
+    })
+
+    it('should return an APIGatewayProxyResult with 400 as the status code', () => {
+        const actual = errors.validationErrorResponse([]);
+        assert.deepEqual(actual.statusCode, 400)
+    })
+    it('should return an APIGatewayProxyResult with hard coded values for validation Errors', () => {
+        errors.validationErrorResponse([]);
+        assert.deepEqual(errBodySpy.getCall(0).args[0], {
+            name: 'VALIDATION_ERR',
+            message: 'The request body could not be validated. See details',
+            details: []
+        })
+    })
+})
+
+describe('joiValidationErrorResponse', () => {
     let joiErrors = <joi.ValidationError>{}
     const sandbox = sinon.createSandbox();
     let errBodySpy = <sinon.SinonSpy>{};
@@ -150,16 +174,16 @@ describe('validationErrorResponse', () => {
         sandbox.restore()
     })
     it('should return an APIGatewayProxyResult with a status code of 400', () => {
-        const actual = errors.validationErrorResponse(joiErrors)
+        const actual = errors.joiValidationErrorResponse(joiErrors)
         assert.deepEqual(actual.statusCode, 400)
     })
     it('should return the "body" parameter from calling the "errorBody" function with hard coded name and message', () => {
-        errors.validationErrorResponse(joiErrors)
+        errors.joiValidationErrorResponse(joiErrors)
         assert.deepEqual(errBodySpy.getCall(0).args[0].name, 'VALIDATION_ERR')
         assert.deepEqual(errBodySpy.getCall(0).args[0].message, 'The request body could not be validated. See details')
     })
     it('should accumulate any details from the joi validation, and map them to ErrorDetails to be returned in the "body" parameter of the response', () => {
-        errors.validationErrorResponse(joiErrors)
+        errors.joiValidationErrorResponse(joiErrors)
         const details = <errors.ErrorDetail[]>errBodySpy.getCall(0).args[0].details;
         let i = 1;
         for (let detail of details) {
@@ -170,7 +194,7 @@ describe('validationErrorResponse', () => {
         }
     })
     it('should map the location field in all mapped ErrorDetail objects as the jois path parameter array joined by "/"', () => {
-        errors.validationErrorResponse(joiErrors)
+        errors.joiValidationErrorResponse(joiErrors)
         const details = <errors.ErrorDetail[]>errBodySpy.getCall(0).args[0].details;
         let i = 1;
         for (let detail of details) {
@@ -180,7 +204,7 @@ describe('validationErrorResponse', () => {
     })
     it('should pass an empty array when no details are provided in joi.ValidationError input parameter', () => {
         joiErrors.details = []
-        errors.validationErrorResponse(joiErrors)
+        errors.joiValidationErrorResponse(joiErrors)
         const details = <errors.ErrorDetail[]>errBodySpy.getCall(0).args[0].details
         assert.deepEqual(details, [])
     })

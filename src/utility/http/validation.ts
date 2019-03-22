@@ -18,7 +18,7 @@ export const validateRequestBody = <T>(body: string | undefined | null, schema: 
     const { error, value } = joi.validate<T>(JSON.parse(body), schema, { abortEarly: false });
     if (error) {
         return {
-            error: errors.validationErrorResponse(error)
+            error: errors.joiValidationErrorResponse(error)
         }
     }
     return {
