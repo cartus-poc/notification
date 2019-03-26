@@ -13,6 +13,9 @@ provider:
   runtime: nodejs8.10
   stage: ${opt:stage,'dev'}
   region: ${opt:region,'us-east-1'}
+  apiKeys:
+    - ${self:provider.stage}-atlas
+    - ${self:provider.stage}-qa-testing
   iamRoleStatements:
     - Effect: "Allow"
       Action:

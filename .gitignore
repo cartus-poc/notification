@@ -16,3 +16,6 @@ junit.xml
 
 # ignore coverage
 coverage
+
+# Ignore lib
+lib

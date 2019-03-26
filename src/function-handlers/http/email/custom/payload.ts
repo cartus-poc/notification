@@ -2,7 +2,10 @@ import joi from 'joi'
 
 export interface Payload {
     to: string | string[],
-    from?: string,
+    from?: string | {
+        name?: string,
+        email: string
+    },
     cc?: string | string[],
     bcc?: string | string[],
     subject: string,
@@ -19,7 +22,13 @@ export const schema = joi.object().keys({
         joi.string().email().max(255),
         joi.array().items(joi.string().email().max(255)).min(1),
     ).required(),
-    from: joi.string().email().max(255).default('do-not-reply@cartus.com'),
+    from: joi.alternatives(
+        joi.string().email().max(255),
+        joi.object().keys({
+            name: joi.string(),
+            email: joi.string().email().max(255).required()
+        })
+    ).default('do-not-reply@cartus.com'),
     cc: joi.alternatives(
         joi.string().email().max(255),
         joi.array().items(joi.string().email().max(255)).min(1),

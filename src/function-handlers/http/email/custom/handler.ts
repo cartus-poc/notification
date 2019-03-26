@@ -64,20 +64,20 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
 }
 
 export const getRestrictedAddressErrors = (payload: Payload): APIGatewayProxyResult => {
-    console.log(process.env.RESTRICT_ADDRESSES)
     if (!process.env.RESTRICT_ADDRESSES || process.env.RESTRICT_ADDRESSES == 'false') return null //Only if we are restricting
     const addressFieldsToCheck = ['to', 'from', 'cc', 'bcc'] //Check these for invalid domains
     const allowedDomains = restricted.allowedDomains// Comma seperated list
         .map(domain => domain.toLowerCase()) //Make them lower case
     const allowedAddresses = restricted.allowedAddresses
-        .map(domain => domain.toLowerCase()) //Make them lower case
+        .map(address => address.toLowerCase()) //Make them lower case
     const normalizeArr = (val: string | string[]) => { return (typeof val === 'string') ? [val] : val }
-    let errs: ErrorDetail[] = []
-    //Creates an array of objects with values joined by pipe. Also retains the field name
+
+    // Reformat addresses into a better data structure with an array as the values
     interface Address { field: string, values: string[] }
     const addresses: Address[] = addressFieldsToCheck.map(field => ({ field, values: normalizeArr(payload[field]) }))
 
-    const addressContainsDomain = (addr: Address) => (addr.values 
+    // Define some helper functions to determine if the address is valid or not
+    const addressContainsDomain = (addr: Address) => (addr.values
         .every(addrValue => allowedDomains //if all of hte address values
             .some(domain => addrValue.toLowerCase().includes(domain)) //... contains at least one of the domains
         )
@@ -88,18 +88,18 @@ export const getRestrictedAddressErrors = (payload: Payload): APIGatewayProxyRes
         )
     )
 
-    for (let address of addresses) { //For each address (to, from etc)
-        if (address.values && //If we have anything for that field
-            (!addressContainsDomain(address) && !addressIsAllowed(address)) //If it's not valid
-        ) {
-            errs.push({ //It's an error
-                field: address.field,
-                value: payload[address.field],
-                issue: `The field value references an invalid address or domain. Addresses are restricted to "${allowedAddresses}", or addresses that use the one of the following domains "${allowedDomains}".`,
-                location: `/${address.field}`
-            })
-        }
-    }
+    //Get any errors by filtering down to addresses with errors, and remapping to ErrorDetail Format
+    let errs: ErrorDetail[] = addresses
+        .filter(address => address.values && address.values.length > 0) // Filter out addresses with no values
+        .filter(address => !addressIsAllowed(address)) // Filter Valid address
+        .filter(address => !addressContainsDomain(address))// Filter Valid Domain
+        .map(address => ({ // Map it to the error format
+            field: address.field,
+            value: payload[address.field],
+            issue: `The field value references an invalid address or domain. Addresses are restricted to "${allowedAddresses}", or addresses that use the one of the following domains "${allowedDomains}".`,
+            location: `/${address.field}`
+        }))
+
     if (errs.length > 0) {
         return validationErrorResponse(errs)
     }

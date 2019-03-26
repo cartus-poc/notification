@@ -233,7 +233,7 @@ describe('post', () => {
 describe('getRestrictedAddressErrors', () => {
     let sandbox = sinon.createSandbox()
     let payload: Payload
-    let restrictedEnvVarStub = <sinon.SinonStub>{}
+    //let restrictedEnvVarStub = <sinon.SinonStub>{}
     if (!process.env.RESTRICT_ADDRESSES) process.env.RESTRICT_ADDRESSES = ''
     beforeEach(() => {
         payload = {
@@ -246,7 +246,7 @@ describe('getRestrictedAddressErrors', () => {
             render: {},
             html: true
         }
-        restrictedEnvVarStub = sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
+        sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
             .value('true')
         sandbox.stub(restricted, 'allowedAddresses')
             .value(['test1@gmail.com', 'test2@yahoo.com'])
@@ -258,19 +258,19 @@ describe('getRestrictedAddressErrors', () => {
     })
     it('should return null when RESTRICT_ADDRESSES env variable is not null, undefined, or "false" as string', () => {
         // restrictedEnvVarStub.restore()
-        restrictedEnvVarStub = sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
+        sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
             .value(null)
         let actual = getRestrictedAddressErrors(payload)
         assert.deepEqual(actual, null)
 
         // restrictedEnvVarStub.restore()
-        restrictedEnvVarStub = sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
+        sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
             .value(undefined)
         actual = getRestrictedAddressErrors(payload)
         assert.deepEqual(actual, null)
 
         // restrictedEnvVarStub.restore()
-        restrictedEnvVarStub = sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
+        sandbox.stub(process.env, 'RESTRICT_ADDRESSES')
             .value('false')
         actual = getRestrictedAddressErrors(payload)
         assert.deepEqual(actual, null)
@@ -298,6 +298,15 @@ describe('getRestrictedAddressErrors', () => {
         payload.from = undefined
         payload.cc = undefined
         payload.bcc = undefined
+
+        let actual = getRestrictedAddressErrors(payload)
+        assert.deepEqual(actual, null)
+    })
+    it('should return null when env variable RESTRICT_ADDRESSES exists, "to" property contains a valid email address from the config, and other addresses are empty arrays', () => {
+        payload.to = 'teST2@yahoO.com'
+        payload.from = undefined
+        payload.cc = []
+        payload.bcc = []
 
         let actual = getRestrictedAddressErrors(payload)
         assert.deepEqual(actual, null)
