@@ -24,7 +24,7 @@ provider:
     ACCOUNT_ID: ${self:custom.accountId.${self:provider.stage}}
     REGION: ${self:provider.region}
     EMAIL_QUEUE_NAME: ${self:custom.emailQueueName.${self:provider.stage}}
-    RESTRICTED_DOMAINS: ${self:custom.restrictedDomains.${self:provider.stage}}
+    RESTRICT_ADDRESSES: ${self:custom.restrictAddresses.${self:provider.stage}}
 
 custom:
   stages:
@@ -39,9 +39,9 @@ custom:
   emailQueueName:
     local: "NotificationEmailQueue-DEV"
     dev: "NotificationEmailQueue-DEV"
-  restrictedDomains:
-    local: "cartus.com"
-    dev: "cartus.com"
+  restrictAddresses:
+    local: true
+    dev: true
 
 functions:
   customEmail:

@@ -3,9 +3,10 @@ import { SQS } from 'aws-sdk'
 import mustache from 'mustache'
 import { Payload, schema } from './payload'
 import { Response } from './response'
-import { errorResponse, validationErrorResponse, Error, ErrorDetail } from '../../../../utility/http/errors'
+import { errorResponse, validationErrorResponse, ErrorDetail } from '../../../../utility/http/errors'
 import * as validation from '../../../../utility/http/validation'
 import { sendSQSMessage } from '../../../../utility/sqs/sqs'
+import restricted from '../address-restriction'
 import Email from '../../../queue/send-email/Email'
 
 const sqs = new SQS({ region: process.env.REGION })
@@ -16,7 +17,7 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
         if (error) return error
 
         //Make sure we do not send email to not allowed domains
-        const restrictedDomainError = getRestrictedDomainErrors(payload)
+        const restrictedDomainError = getRestrictedAddressErrors(payload)
         if (restrictedDomainError) return restrictedDomainError
 
         //Render the template for email body
@@ -62,25 +63,39 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
     }
 }
 
-export const getRestrictedDomainErrors = (payload: Payload): APIGatewayProxyResult => {
-    if (!process.env.RESTRICTED_DOMAINS) return null //Only if we are restricting
+export const getRestrictedAddressErrors = (payload: Payload): APIGatewayProxyResult => {
+    console.log(process.env.RESTRICT_ADDRESSES)
+    if (!process.env.RESTRICT_ADDRESSES || process.env.RESTRICT_ADDRESSES == 'false') return null //Only if we are restricting
     const addressFieldsToCheck = ['to', 'from', 'cc', 'bcc'] //Check these for invalid domains
-    const restrictedDomains = process.env.RESTRICTED_DOMAINS.split(',')// Comma seperated list
+    const allowedDomains = restricted.allowedDomains// Comma seperated list
+        .map(domain => domain.toLowerCase()) //Make them lower case
+    const allowedAddresses = restricted.allowedAddresses
         .map(domain => domain.toLowerCase()) //Make them lower case
     const normalizeArr = (val: string | string[]) => { return (typeof val === 'string') ? [val] : val }
     let errs: ErrorDetail[] = []
     //Creates an array of objects with values joined by pipe. Also retains the field name
-    const addresses = addressFieldsToCheck.map(field => ({ field, values: normalizeArr(payload[field]) }))
+    interface Address { field: string, values: string[] }
+    const addresses: Address[] = addressFieldsToCheck.map(field => ({ field, values: normalizeArr(payload[field]) }))
+
+    const addressContainsDomain = (addr: Address) => (addr.values 
+        .every(addrValue => allowedDomains //if all of hte address values
+            .some(domain => addrValue.toLowerCase().includes(domain)) //... contains at least one of the domains
+        )
+    )
+    const addressIsAllowed = (addr: Address) => (addr.values
+        .every(addrValue => allowedAddresses //If all of the address values
+            .some(allowedAddr => addrValue.trim().toLowerCase() === allowedAddr.trim().toLowerCase()) //are equal to at least one of the allowed addresses
+        )
+    )
+
     for (let address of addresses) { //For each address (to, from etc)
-        if (address.values && !address.values //If it has a value
-                .every(addrValue => restrictedDomains //if that value...
-                    .some(domain => addrValue.toLowerCase().includes(domain)) //... does not contain at least one of the restricted domains
-                )
-            ) {
+        if (address.values && //If we have anything for that field
+            (!addressContainsDomain(address) && !addressIsAllowed(address)) //If it's not valid
+        ) {
             errs.push({ //It's an error
                 field: address.field,
                 value: payload[address.field],
-                issue: `The field value references an address to a domain that is not valid. Domains have been restricted to "${restrictedDomains}".`,
+                issue: `The field value references an invalid address or domain. Addresses are restricted to "${allowedAddresses}", or addresses that use the one of the following domains "${allowedDomains}".`,
                 location: `/${address.field}`
             })
         }
@@ -90,26 +105,3 @@ export const getRestrictedDomainErrors = (payload: Payload): APIGatewayProxyResu
     }
     return null;
 }
-
-// export const sESEmailParams = (payload: Payload, emailBody: string): SES.SendEmailRequest => {
-//     return {
-//         Source: payload.from,
-//         Destination: {
-//             ToAddresses: payload.to,
-//             CcAddresses: payload.cc,
-//             BccAddresses: payload.bcc
-//         },
-//         Message: {
-//             Body: {
-//                 Html: {
-//                     Charset: 'UTF-8',
-//                     Data: emailBody
-//                 }
-//             },
-//             Subject: {
-//                 Charset: 'UTF-8',
-//                 Data: payload.subject
-//             }
-//         }
-//     }
-// }

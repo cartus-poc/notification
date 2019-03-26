@@ -45,7 +45,7 @@ describe('sendSQSMessage', () => {
     it('should pass the provided params into the sqs.sendMessage function', (done) => {
         let actual = sqs.sendSQSMessage(<SQS>sqsDep, params)
         actual
-            .then(data => {
+            .then(_ => {
                 assert.deepEqual(sqsDep.sendMessage.getCall(0).args[0], params)
                 done();
             })
