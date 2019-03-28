@@ -20,7 +20,7 @@ module.exports = {
         "node"
     ],
     "moduleNameMapper": {
-        "\\.(css|html|hbs)$": "<rootDir>/test/static-resources-mock.js"
+        "\\.(css|html|hbs|yml|yaml|txt)$": "<rootDir>/test/__mocks__/static-resources-mock.ts"
     },
     "reporters": ["default", "jest-junit"]
 }

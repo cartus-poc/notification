@@ -62,6 +62,18 @@ functions:
               - NotificationEmailQueue
               - Arn
           batchSize: 1
+  openAPI:
+    handler: src/function-handlers/http/docs/open-api/handler.get
+    events:
+      - http:
+          method: get
+          path: /api/v1/open-api.yml
+  documentationUI:
+    handler: src/function-handlers/http/docs/ui/handler.get
+    events:
+      - http:
+          method: get
+          path: /api/v1/documentation
 
 resources:
   Resources:

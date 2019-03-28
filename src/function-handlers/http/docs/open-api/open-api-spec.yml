@@ -1,0 +1,206 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Notification API
+  description: An API used for sending notifications through multiple communication channels. Currently supports email.
+servers:
+  - url: http://localhost:3000/v1/notification/
+  - url: https://eupu04gjvj.execute-api.us-east-1.amazonaws.com/dev/api/v1/
+paths:
+  /email/custom:
+    #POST Custom Email
+    post:
+      description: Creates a new custom email notification and stages it to be sent via email.
+      operationId: Post Custom Email
+      tags: 
+        - Email Notifications
+      requestBody:
+        description: | 
+          ## The Email parameters, the template, and the data to be rendered
+          ### Parameters 'to', 'cc', and 'bcc' can be either a string or an array of strings. 'from' parameter can be either a string or an object with name and email. 'template' parameter may be a string or an object with wrapper and content properties"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomEmail'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailResponse'
+        '400':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+# Data Models
+components:
+  schemas:
+    CustomEmail:
+      required:
+        - render
+        - template 
+      allOf:
+        - $ref: '#/components/schemas/EmailParams'
+        - type: object
+          properties:
+            html:
+              type: boolean
+              description: If set to true, will assume the email is of HTML type when sending
+            render:
+              type: object
+              description: An object defined by the caller of the API used to render against the template. This object has no schema, and can be defined ad-hoc. It must however be compatible with the template provided
+              example: { firstName: 'bob', lastName: 'smith' }
+            template:
+              example: { wrapper: '<html><body>{{{content}}}</body></html>', content: '<h1>{{firstName}}, {{lastName}}</h1>'}
+              oneOf:
+                - type: string
+                  description: A Moustache style template represented as a single string
+                  example: '<html><body><h1>{{name}}</h1></body></html>'
+                - type: object
+                  required:
+                    - wrapper
+                    - content
+                  properties: 
+                    wrapper:
+                      type: string
+                      description: An outter wrapper string used to render the content property. Remember to use triple curly-braces if you want to rendern html within the content. See example
+                      example: '<html><body>{{{content}}}</body></html>'
+                    content:
+                      type: string
+                      description: The inner content to be rendered against the wrapper. The render object will be rendered against this content
+                      example: '<h1>{{name}}</h1>'
+    EmailParams:
+      required:
+        - to
+        - subject
+      properties:
+        to:
+          example: [abc@123.com, abc@234.com]
+          oneOf:
+            - type: string
+              description: The email address of the email To recipiant(s) 
+              example: someone@example.com
+              format: email
+            - type: array
+              items:
+                type: string
+                description: The email addresses of the email To recipiants
+                example: someone@example.com
+                format: email
+        from:
+          example: { name: 'Test Name', email: 'test-email@example.com'}
+          oneOf:
+            - type: string
+              description: The email address of the sender of the email 
+              example: someone@example.com
+              format: email
+            - type: object
+              properties:
+                name:
+                  type: string
+                  description: The name of the sender of the email
+                  example: Bob Smith
+                email:
+                  type: string
+                  description: The email address of the sender of the email
+                  example: someone@example.com
+                  format: email 
+        cc:
+          example: [abc@123.com, abc@234.com]
+          oneOf:
+            - type: string
+              description: The email address of the email CC recipiant(s) 
+              example: someone@example.com
+              format: email
+            - type: array
+              items:
+                type: string
+                description: The email addresses of the email CC recipiants
+                example: someone@example.com
+                format: email
+        bcc:
+          example: [abc@123.com, abc@234.com]
+          oneOf:
+            - type: string
+              description: The email address of the email BCC recipiant(s) 
+              example: someone@example.com
+              format: email
+            - type: array
+              items:
+                type: string
+                description: The email addresses of the email BCC recipiants
+                example: someone@example.com
+                format: email 
+        subject:
+          type: string
+          description: The subject of the email
+          example: A great Email subject
+    EmailResponse:
+      required:
+        - render
+        - template 
+      allOf:
+        - $ref: '#/components/schemas/EmailParams'
+        - type: object
+          properties:
+            html: 
+              type: string
+              description: The HTML Body of the email
+              example: '<html><body>Content</body></html>'
+            text:
+              type: string
+              description: The Text body of the email
+              example: Content
+
+    # Generic Error response
+    Error:
+      required:
+        - name
+        - message
+        - debugId
+      properties:
+        name:
+          type: string
+          description: A human-readable, unique name for the error
+          example: VALIDATION_ERROR
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: JSON Pointer to the field in error if in body
+                example: /from/name
+              value:
+                type: string
+                description: Value of the field in Error
+                example: Some Value from JSON Property
+              issue:
+                type: string
+                description: Reason for Error
+                example: Value exceeds maximum length of 10 characters
+              location:
+                type: string
+                description: The location of the field in the error, either query, path, or body. If this field is not present, the default value is body.
+                example: body
+        debugId:
+          type: string
+          description: A unique error identifier generated on the server-side and logged for correlation purposes.
+          example: 3e11297b3c7c16cd727511b9c8d9a086
+        message:
+          type: string
+          description: A human-readable message, describing the error
+          example: Invalid JSON format. Could not parse JSON structure
+        

@@ -28,6 +28,7 @@
     "jest": "^24.4.0",
     "jest-junit": "^6.3.0",
     "joi-to-swagger": "^3.1.0",
+    "raw-loader": "^2.0.0",
     "serverless": "^1.39.1",
     "serverless-offline": "^4.8.1",
     "serverless-pseudo-parameters": "^2.4.0",
