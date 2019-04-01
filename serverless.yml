@@ -22,12 +22,17 @@ provider:
         - "sqs:SendMessage"
         - "sqs:GetQueueUrl"
       Resource: "arn:aws:sqs:${self:provider.region}:${self:provider.environment.ACCOUNT_ID}:${self:provider.environment.EMAIL_QUEUE_NAME}"
+    - Effect: "Allow"
+      Action:
+        - "sns:Publish"
+      Resource: ${self:custom.emailTopicARN.${self:provider.stage}}  
   environment:
     SENDGRID_API_KEY: ${self:custom.sendgridKey.${self:provider.stage}}
     ACCOUNT_ID: ${self:custom.accountId.${self:provider.stage}}
     REGION: ${self:provider.region}
     EMAIL_QUEUE_NAME: ${self:custom.emailQueueName.${self:provider.stage}}
     RESTRICT_ADDRESSES: ${self:custom.restrictAddresses.${self:provider.stage}}
+    SNS_ARN: ${self:custom.emailTopicARN.${self:provider.stage}}
 
 custom:
   stages:
@@ -42,6 +47,12 @@ custom:
   emailQueueName:
     local: "NotificationEmailQueue-DEV"
     dev: "NotificationEmailQueue-DEV"
+  emailTopicName:
+    local: "NotificationEmailTopic-DEV"
+    dev: "NotificationEmailTopic-DEV"
+  emailTopicARN:
+    local: ${file(./local.config.json):SNS_ARN} 
+    dev: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.emailTopicName.${self:provider.stage}}" ] ]  } 
   restrictAddresses:
     local: true
     dev: true
@@ -53,6 +64,7 @@ functions:
       - http:
           method: post
           path: /api/v1/email/custom
+          private: true
   sendEmail:
     handler: src/function-handlers/queue/send-email/handler.run
     events:
@@ -62,6 +74,12 @@ functions:
               - NotificationEmailQueue
               - Arn
           batchSize: 1
+  sendEmailSNS:
+    handler: src/function-handlers/queue/send-email/handler.runSNS
+    events:
+      - sns: 
+          arn: ${self:custom.emailTopicARN.${self:provider.stage}} 
+          topicName: ${self:custom.emailTopicName.${self:provider.stage}}
   openAPI:
     handler: src/function-handlers/http/docs/open-api/handler.get
     events:
@@ -81,3 +99,8 @@ resources:
       Type: "AWS::SQS::Queue"
       Properties:
         QueueName: ${self:custom.emailQueueName.${self:provider.stage}}
+    NotificationEmailTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: 'An Email needs to be sent'
+        TopicName: ${self:custom.emailTopicName.${self:provider.stage}}

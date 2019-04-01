@@ -1,18 +1,21 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
-import { SQS } from 'aws-sdk'
+import { SNS } from 'aws-sdk'
 import mustache from 'mustache'
 import { Payload, schema } from './payload'
 import { Response } from './response'
 import { errorResponse, validationErrorResponse, ErrorDetail } from '../../../../utility/http/errors'
 import * as validation from '../../../../utility/http/validation'
-import { sendSQSMessage } from '../../../../utility/sqs/sqs'
+//import { sendSQSMessage } from '../../../../utility/sqs/sqs'
+import { publishSNSMessage } from '../../../../utility/sns/sns'
 import restricted from '../address-restriction'
 import Email from '../../../queue/send-email/Email'
 
-const sqs = new SQS({ region: process.env.REGION })
+// const sqs = new SQS({ region: process.env.REGION })
+const sns = new SNS()
 
 export const post: APIGatewayProxyHandler = async (event, _context) => {
     try {
+        console.log('got the arn', process.env)
         const { error, payload } = validation.validateRequestBody<Payload>(event.body, schema)
         if (error) return error
 
@@ -38,14 +41,19 @@ export const post: APIGatewayProxyHandler = async (event, _context) => {
         //Determine if email should be html or text
         if (payload.html) email.html = emailBody; else email.text = emailBody
 
-        const queueUrl = `https://sqs.${process.env.REGION}.amazonaws.com/${process.env.ACCOUNT_ID}/${process.env.EMAIL_QUEUE_NAME}`
-        const sqsRes = await sendSQSMessage(sqs, {
-            MessageBody: JSON.stringify(email),
-            QueueUrl: queueUrl
-        });
+        // const queueUrl = `https://sqs.${process.env.REGION}.amazonaws.com/${process.env.ACCOUNT_ID}/${process.env.EMAIL_QUEUE_NAME}`
+        // const sqsRes = await sendSQSMessage(sqs, {
+        //     MessageBody: JSON.stringify(email),
+        //     QueueUrl: queueUrl
+        // });
+
+        const snsRes = await publishSNSMessage(sns, {
+            TopicArn: process.env.SNS_ARN,
+            Message: JSON.stringify(email)
+        })
 
         const res: Response = {
-            queueId: sqsRes.MessageId,
+            queueId: snsRes.MessageId,
             email
         };
 
